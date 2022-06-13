@@ -5,4 +5,12 @@ We try to keep Burst Statistics as easy as possible, for anyone interested in co
 
 **Change Bounce Rate Metric** 
 
-Please start an issue, and if you have a fix a pull request. Please explain your issue clearly, and use comments when adding a pull request. Your contribution will be acknowledged on WordPress.org.
+You can change the metric when a pageview should be converted to a bounce. For some website, or loading options you might want to shorten the time period to interaction, or give users a little more time to interact e.g. when using animations or loading screens.
+
+**User role based exclusion** 
+
+Administrators are excluded by default. To exclude more user roles, or custom user roles you can use this MU plugin to improve you data.
+
+**Block IP addresses** 
+
+Blocking IP addresses is a 2 step process; please [this article](https://burst-statistics.com/exclude-ip-addresses-from-burst-statistics/) to get started.
