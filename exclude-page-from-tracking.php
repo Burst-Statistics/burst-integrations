@@ -16,4 +16,4 @@ function set_referrer_to_spammer( $sanitized_data ) {
 
     return $sanitized_data;
 }
-add_filter( 'before_burst_track_hit', 'set_referrer_to_spammer' );
+add_filter( 'burst_before_track_hit', 'set_referrer_to_spammer' );
