@@ -2,6 +2,7 @@
 
 /**
  * Exclude a page from tracking by setting the referrer to spammer
+ * Add this function in the wp-config.php, as an mu-plugin is not laoded during the track hit process.
  *
  * @param $sanitized_data
  * @return mixed
