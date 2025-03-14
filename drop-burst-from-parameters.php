@@ -4,13 +4,8 @@
  * Version: 1.0
  */
 function my_datatable_data_override( $data, $start, $end, $metrics, $filters, $group_by, $order_by, $limit) {
-    foreach ($data as &$item) {
-        if (isset($item['parameters'])) {
-            $parts = explode('=', $item['parameters'], 2);
-            $item['parameters'] = $parts[1] ?? $item['parameters'];
-        }
-    }
-
-    return $data;
+    return array_filter($data, function($item) {
+        return !(isset($item['parameters']) && strpos($item['parameters'], 'burst') !== false);
+    });
 }
 add_filter("burst_datatable_data", 'my_datatable_data_override', 10, 8 );
