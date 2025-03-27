@@ -6,8 +6,13 @@
  * @return array
  */
 function set_spider_to_spammer( $sanitized_data ) {
-    //check if $sanitized_data['browser'] contains 'YisouSpider'
-    if ( str_contains($sanitized_data['browser'], 'YisouSpider') ){
+    global $wpdb;
+    $sql = "select ID from {$wpdb->prefix}burst_browsers where name='YisouSpider'";
+    $spider_id = $wpdb->get_var($sql);
+    if ( !$spider_id ) {
+        return $sanitized_data;
+    }
+    if ( $sanitized_data['browser_id']===$spider_id ){
         //we use a trick, by setting the referrer to spammer, this page won't get tracked.
         $sanitized_data['referrer'] = 'spammer';
     }
