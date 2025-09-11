@@ -5,7 +5,9 @@ function my_burst_update_postmeta() {
     $posts      = get_posts(
         [
             'post_type'   => $post_types,
-            'post_status' => 'any',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+
         ]
     );
 
