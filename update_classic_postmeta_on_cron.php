@@ -1,5 +1,7 @@
 <?php
 
+use Burst\Frontend\Frontend_Statistics;
+
 function my_burst_update_postmeta() {
     $post_types = apply_filters( 'burst_column_post_types', [ 'post', 'page' ] );
     $posts      = get_posts(
