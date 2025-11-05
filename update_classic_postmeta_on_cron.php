@@ -15,8 +15,9 @@ function my_burst_update_postmeta() {
 
     if ( ! empty( $posts ) ) {
         foreach ( $posts as $post ) {
-            $statistics = new Frontend_Statistics();
-            $count      = $statistics->get_post_views( $post->ID, 0, time() );
+            $statistics = new Burst\Frontend\Frontend();
+            $count      = $statistics->get_post_pageviews( $post->ID, 0, time() );
+            error_log("count $count");
             update_post_meta( $post->ID, 'burst_total_pageviews_count', $count );
         }
     }

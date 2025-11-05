@@ -3,7 +3,6 @@
 
 use Burst\Admin\Statistics\Statistics;
 use Burst\Frontend\Sessions;
-use Burst\Pro\Pro_Statistics;
 
 function my_install_tables() {
     $upgraded = get_option('burst_upgraded_custom', 0);
