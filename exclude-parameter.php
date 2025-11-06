@@ -7,7 +7,7 @@
  */
 function set_parameter_to_spammer(array $sanitized_data ): array
 {
-    if ( str_contains( $sanitized_data['parameters'], 'id=')!==false || str_contains( $sanitized_data['parameters'], 'autoupdater_nonce=')!==false ) {
+    if ( strpos( $sanitized_data['parameters'], 'id=')!==false || strpos( $sanitized_data['parameters'], 'autoupdater_nonce=')!==false ) {
         $sanitized_data['referrer'] = 'spammer';
     }
 
