@@ -1,6 +1,6 @@
 <?php
 
-use Burst\Frontend\Frontend_Statistics;
+use Burst\Frontend\Frontend;
 
 function my_burst_update_postmeta() {
     $post_types = apply_filters( 'burst_column_post_types', [ 'post', 'page' ] );
@@ -15,7 +15,7 @@ function my_burst_update_postmeta() {
 
     if ( ! empty( $posts ) ) {
         foreach ( $posts as $post ) {
-            $statistics = new Burst\Frontend\Frontend();
+            $statistics = new Frontend();
             $count      = $statistics->get_post_pageviews( $post->ID, 0, time() );
             error_log("count $count");
             update_post_meta( $post->ID, 'burst_total_pageviews_count', $count );
@@ -23,3 +23,6 @@ function my_burst_update_postmeta() {
     }
 }
 add_action('burst_daily', 'my_burst_update_postmeta');
+//add_action('plugins_loaded', function() {
+//    add_action('burst_daily', 'my_burst_update_postmeta');
+//});
