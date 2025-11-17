@@ -9,35 +9,128 @@
  */
 
 /**
- * This is a testing script to check how many rows will be updated.
+ * This is a testing script to check what rows will be updated.
  */
 
     -- Test query
-    SELECT COUNT(*) as rows_to_update
-    FROM wp_burst_statistics
-    WHERE time BETWEEN 1234567890 AND 1234567999
-    AND uid IS NOT NULL
-    AND uid != '';
+SELECT
+    bs1.ID,
+    bs1.uid,
+    bs1.session_id as old_session_id,
+    bs2.group_session_id as new_session_id,
+    bs1.time,
+    FROM_UNIXTIME(bs1.time) as time_readable,
+    bs1.page_url
+FROM wp_burst_statistics bs1
+INNER JOIN (
+    WITH RankedHits AS (
+SELECT
+            ID,
+            uid,
+            session_id,
+            time,
+            LAG(time) OVER (PARTITION BY uid ORDER BY time) as prev_time,
+            CASE
+                WHEN LAG(time) OVER (PARTITION BY uid ORDER BY time) IS NULL
+OR time - LAG(time) OVER (PARTITION BY uid ORDER BY time) > 1800
+                THEN 1
+                ELSE 0
+            END as is_new_session
+        FROM wp_burst_statistics
+        WHERE time BETWEEN 1234567890 AND 1234567999
+AND uid IS NOT NULL
+AND uid != ''
+    ),
+    SessionGroups AS (
+SELECT
+            ID,
+            uid,
+            session_id,
+            time,
+            SUM(is_new_session) OVER (PARTITION BY uid ORDER BY time) as session_group
+        FROM RankedHits
+    ),
+    FirstSessionPerGroup AS (
+SELECT
+            uid,
+            session_group,
+            MIN(session_id) as group_session_id
+        FROM SessionGroups
+        GROUP BY uid, session_group
+    )
+    SELECT
+        sg.ID,
+        sg.uid,
+        fsg.group_session_id
+    FROM SessionGroups sg
+    INNER JOIN FirstSessionPerGroup fsg
+        ON sg.uid = fsg.uid
+AND sg.session_group = fsg.session_group
+) bs2 ON bs1.ID = bs2.ID
+WHERE bs1.session_id != bs2.group_session_id
+ORDER BY bs1.uid, bs1.time;
 
 /**
- * Script to update the session_id in wp_burst_statistics table based on the first session_id for each unique uid within the specified time range.
+ * This MySQL query consolidates session IDs for the same user (uid) while respecting the 30-minute session timeout rule:
+ *
+ * Groups pageviews by user (uid) and orders them chronologically
+ * Creates new session groups whenever there's a gap of more than 30 minutes (1800 seconds) between consecutive hits from the same user
+ * Assigns all pageviews within each session group the lowest session_id from that group
+ * Only processes records within the specified time range
+ *
  */
 
     UPDATE wp_burst_statistics bs1
 INNER JOIN (
-    SELECT
-        uid,
-        MIN(session_id) as first_session_id
-    FROM wp_burst_statistics
-    WHERE time BETWEEN 1234567890 AND 1234567999
+    WITH RankedHits AS (
+SELECT
+            ID,
+            uid,
+            session_id,
+            time,
+            LAG(time) OVER (PARTITION BY uid ORDER BY time) as prev_time,
+            -- Nieuwe sessie als > 30 minuten sinds vorige hit
+            CASE
+                WHEN LAG(time) OVER (PARTITION BY uid ORDER BY time) IS NULL
+OR time - LAG(time) OVER (PARTITION BY uid ORDER BY time) > 1800
+                THEN 1
+                ELSE 0
+            END as is_new_session
+        FROM wp_burst_statistics
+        WHERE time BETWEEN 1234567890 AND 1234567999
 AND uid IS NOT NULL
 AND uid != ''
-    GROUP BY uid
-) bs2 ON bs1.uid = bs2.uid
-SET bs1.session_id = bs2.first_session_id
+    ),
+    SessionGroups AS (
+SELECT
+            ID,
+            uid,
+            session_id,
+            time,
+            -- Cumulatieve som van nieuwe sessies = sessie groep nummer
+            SUM(is_new_session) OVER (PARTITION BY uid ORDER BY time) as session_group
+        FROM RankedHits
+    ),
+    FirstSessionPerGroup AS (
+SELECT
+            uid,
+            session_group,
+            MIN(session_id) as group_session_id
+        FROM SessionGroups
+        GROUP BY uid, session_group
+    )
+    SELECT
+        sg.ID,
+        fsg.group_session_id
+    FROM SessionGroups sg
+    INNER JOIN FirstSessionPerGroup fsg
+        ON sg.uid = fsg.uid
+AND sg.session_group = fsg.session_group
+) bs2 ON bs1.ID = bs2.ID
+SET bs1.session_id = bs2.group_session_id
 WHERE bs1.time BETWEEN 1234567890 AND 1234567999
 AND bs1.uid IS NOT NULL
-AND bs1.uid != '';
+AND bs1.uid != '';;
 
     /**
      * Test script to test how many orphaned sessions are in the wp_burst_sessions table after running the update script.
