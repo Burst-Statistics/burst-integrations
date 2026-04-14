@@ -1,54 +1,68 @@
 <?php
-
 /**
- * Include the below in the wp-config.php, to ensure it is loaded before the plugin is loaded.
- * @param array $sanitized_data
- * @return array
+ * Exclude YisouSpider from tracking and permanently delete historical data.
+ *
+ * Include in wp-config.php to ensure it is loaded before the plugin.
+ *
+ * @param array<string, mixed> $sanitized_data The tracking data being processed.
+ *
+ * @return array<string, mixed> Modified tracking data with referrer set to 'spammer' for the spider.
  */
-function set_spider_to_spammer( $sanitized_data ) {
+function set_spider_to_spammer( array $sanitized_data ): array {
     global $wpdb;
-    $sql = "select ID from {$wpdb->prefix}burst_browsers where name='YisouSpider'";
-    $spider_id = $wpdb->get_var($sql);
-    if ( !$spider_id ) {
+    $spider_id = $wpdb->get_var(
+        "SELECT ID FROM {$wpdb->prefix}burst_browsers WHERE name = 'YisouSpider'"
+    );
+    if ( ! $spider_id ) {
         return $sanitized_data;
     }
-    if ( $sanitized_data['browser_id']===$spider_id ){
-        //we use a trick, by setting the referrer to spammer, this page won't get tracked.
+
+    if ( (int) ( $sanitized_data['browser_id'] ?? 0 ) === (int) $spider_id ) {
         $sanitized_data['referrer'] = 'spammer';
     }
 
     return $sanitized_data;
 }
-add_filter( 'before_burst_track_hit', 'set_spider_to_spammer' );
+add_filter( 'burst_before_track_hit', 'set_spider_to_spammer' );
 
 /**
- * permanently delete yisou spider hits
+ * Permanently delete YisouSpider sessions and related statistics.
+ *
+ * Runs once on init; sets an option flag to prevent re-execution.
+ * Note: browser_id is stored on the burst_sessions table.
+ *
  * @return void
  */
-function burst_exclude_spider(){
-    if ( get_option('burst_yisou_spider_removed') ) {
+function burst_exclude_spider(): void {
+    if ( get_option( 'burst_yisou_spider_removed' ) ) {
         return;
     }
 
     global $wpdb;
-    $sql = "select ID from {$wpdb->prefix}burst_browsers where name='YisouSpider'";
-    $spider_id = $wpdb->get_var($sql);
-    if (!$spider_id) {
+    $spider_id = $wpdb->get_var(
+        "SELECT ID FROM {$wpdb->prefix}burst_browsers WHERE name = 'YisouSpider'"
+    );
+    if ( ! $spider_id ) {
         return;
     }
-    //first, remove all entries from the sessions table that are related to this spider
-    $sql = "DELETE FROM {$wpdb->prefix}burst_sessions
-            WHERE ID IN (
-                SELECT session_id
-                FROM {$wpdb->prefix}burst_statistics
-                WHERE browser_id = $spider_id
-            );";
-    $wpdb->query($sql);
 
-    //then, remove all entries from the statistics table that are related to this spider
-    $sql = "delete from {$wpdb->prefix}burst_statistics where browser_id={$spider_id}";
-    $wpdb->query($sql);
+    // Remove all sessions related to this spider (browser_id is on burst_sessions).
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}burst_sessions WHERE browser_id = %d",
+            $spider_id
+        )
+    );
 
-    update_option('burst_yisou_spider_removed', true, false);
+    // Remove all statistics linked to those sessions.
+    // After deleting sessions, orphaned statistics can be cleaned up via the
+    // burst_sessions.ID <-> burst_statistics.session_id relationship.
+    $wpdb->query(
+        "DELETE s FROM {$wpdb->prefix}burst_statistics s
+         LEFT JOIN {$wpdb->prefix}burst_sessions sess ON s.session_id = sess.ID
+         WHERE sess.ID IS NULL"
+    );
+
+    update_option( 'burst_yisou_spider_removed', true, false );
 }
-add_action('init', 'burst_exclude_spider');
+add_action( 'init', 'burst_exclude_spider' );

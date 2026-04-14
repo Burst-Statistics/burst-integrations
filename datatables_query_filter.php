@@ -1,27 +1,20 @@
 <?php
-
 /**
- * Filter the datatables query output to show post titles instead of urls.
+ * Filter the datatables query output to show post titles instead of URLs.
  * This may be too slow in some cases and should be used with caution.
  *
- * @param $data
- * @param $start
- * @param $end
- * @param $metrics
- * @param $filters
- * @param $group_by
- * @param $order_by
- * @param $limit
- * @return array
+ * @param array<int, array<string, mixed>> $data     The datatable rows.
+ * @param object                           $qd       The Query_Data object.
+ *
+ * @return array<int, array<string, mixed>>
  */
-function my_datatable_data_override( $data, $start, $end, $metrics, $filters, $group_by, $order_by, $limit) {
-    foreach ($data as $index => $item) {
-        //maybe add a condition here to limit the number of times this code runs
-        $page = get_page_by_path($item['page_url']);
-        if ( $page ){
-            $data[$index]['page_url'] = $page->post_title;
+function my_datatable_data_override( array $data, object $qd ): array {
+    foreach ( $data as $index => $item ) {
+        $page = get_page_by_path( $item['page_url'] ?? '' );
+        if ( $page ) {
+            $data[ $index ]['page_url'] = $page->post_title;
         }
     }
     return $data;
 }
-add_filter("burst_datatable_data", 'my_datatable_data_override', 10, 8 );
+add_filter( 'burst_datatable_data', 'my_datatable_data_override', 10, 2 );
