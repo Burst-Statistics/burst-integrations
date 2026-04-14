@@ -17,12 +17,8 @@ function my_burst_update_postmeta() {
         foreach ( $posts as $post ) {
             $statistics = new Frontend();
             $count      = $statistics->get_post_pageviews( $post->ID, 0, time() );
-            error_log("count $count");
             update_post_meta( $post->ID, 'burst_total_pageviews_count', $count );
         }
     }
 }
 add_action('burst_daily', 'my_burst_update_postmeta');
-//add_action('plugins_loaded', function() {
-//    add_action('burst_daily', 'my_burst_update_postmeta');
-//});
